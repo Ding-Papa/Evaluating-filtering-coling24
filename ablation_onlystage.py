@@ -1,4 +1,3 @@
-# 大模型推断结果、小模型直接根据filter筛选，不再让大模型进行二次判断
 import os, sys, time, ljqpy, math, re, json
 from tqdm import tqdm
 import numpy as np
@@ -28,14 +27,14 @@ datadir = './dataset/' + dname
 def wdir(x): return os.path.join(dname, x)
 if args.stage == 'two':
     if args.peft:
-        origin_file = 'eval_origin_' + args.model + '_peft.json'
+        origin_file = 'your path'
     else:
-        origin_file = 'eval_origin_' + args.model + '.json'
+        origin_file = 'your path'
 else:
     if args.peft:
-        origin_file = 'eval_filter_' + args.model + '_peft.json'
+        origin_file = 'your path'
     else:
-        origin_file = 'eval_filter_' + args.model + '.json'
+        origin_file = 'your path'
 
 def tt2(t):
     try:
@@ -49,7 +48,7 @@ def tt2_reverse(t):
         ans = t['em2Text']+' | '+t['em1Text']+' | '+t['label'] 
     except:
         ans = 'wrongcase'
-    return ans   # 为了适应正常语序;兼容主客体如果大模型识别反了的情况
+    return ans
 
 def ComputeOne_2(item, preds, f1, fout, label=None):
     spos = item['std_ans']
@@ -77,13 +76,13 @@ with open(wdir(origin_file),'r',encoding='utf-8') as fin:
     preds = json.load(fin)
 
 if args.stage == 'two':
-    with open(wdir('smallmodel_triples.json'),'r',encoding='utf-8') as fin:
+    with open(wdir('your_path'),'r',encoding='utf-8') as fin:
         outs = json.load(fin)
     for i in range(min(len(outs),len(preds))):
         add_list = outs[i]['preds']
         preds[i]['relationMentions'] = preds[i]['relationMentions'] + add_list
 else:
-    with open(wdir('candidate.json'),'r',encoding='utf-8') as fin:
+    with open(wdir('your_path'),'r',encoding='utf-8') as fin:
         outs = json.load(fin)
     for i in range(min(len(outs),len(preds))):
         candi_list = outs[i]['preds']
@@ -124,7 +123,7 @@ class MetricF1:
 spo_limits = [1,2]
 for spo_limit in spo_limits:
     f1 = MetricF1()
-    fout = open('ret.txt', 'w', encoding='utf-8')
+    fout = open('your_path', 'w', encoding='utf-8')
     for i in range(min(len(outs),len(preds))):
         if len(outs[i]['std_ans']) >= spo_limit:
             ComputeOne_2(outs[i], preds[i], f1, fout)

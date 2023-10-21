@@ -36,25 +36,12 @@ ee_threshold = config[dname]['thre_ee']
 from transformers import BertTokenizer, BertModel, set_seed
 set_seed(52)
 
-if dname in ['HacRED', 'ske2019']: plm_name = '/data/dell/dingzepeng/hub/models--hfl--chinese-roberta-wwm-ext/snapshots/5c58d0b8ec1d9014354d691c538661bf00bfdb44'
-# if dname in ['HacRED', 'ske2019']: plm_name = 'bert-base-chinese'
-else: plm_name = '/data/dell/dingzepeng/hub/models--bert-base-cased/snapshots/5532cc56f74641d4bb33641f5c76a55d11f846e0'
+if dname in ['HacRED', 'ske2019']: plm_name = 'hfl/chinese-roberta-wwm-ext'
+else: plm_name = 'bert-base-cased'
 tokenizer = BertTokenizer.from_pretrained(plm_name, model_max_length=maxlen)
 with open(os.path.join(datadir, 'rel2id.json')) as fin:
 	rel_map = json.load(fin)
 rev_rel_map = {v:k for k,v in rel_map.items()}
-
-""" class TokenList_:
-	def __init__(self, rel_list, special_marks=[]):
-		self.id2t = [i for i in rel_list.keys()]
-		self.t2id = {v:k for k,v in enumerate(self.id2t)}
-	def get_id(self, token): return self.t2id.get(token, 1)
-	def get_token(self, ii): return self.id2t[ii]
-	def get_num(self): return len(self.id2t)
-
-with open('dataset/WebNLG/rel2id.json','r+') as f:
-    rel_list = json.loads(f.read())
-rels = TokenList_(rel_list) """
 rels = None
 
 from utils import TN, restore_token_list, GetTopSpans, FindValuePos
@@ -64,8 +51,6 @@ class Dataset(torch.utils.data.Dataset):
         self.y = 0
         #global rel
         global rel_map
-        #if rels is None:
-        #    rels = ljqpy.TokenList(wdir('rels.txt'), 1, data, lambda z:[x['label'] for x in z['relationMentions']], save_low_freq=1)
         print('rels:', len(rel_map))
         #print(rels.t2id)
         self.items = []
@@ -73,8 +58,6 @@ class Dataset(torch.utils.data.Dataset):
             item = {}
             item['tid'] = torch.tensor(tokenizer.encode(z['sentText'])[:512])
             item['yrc'] = list(set(rel_map[x['label']] for x in z['relationMentions']))
-            #item['yrc'] = list(set(rels.t2id[x['label']] for x in z['relationMentions']))
-            #item['yrc'] = [i for i in item['yrc'] if random.random() > negative_threshold]
             self.items.append(item)
             self.y += len(item['yrc'])
     def __len__(self): return len(self.items)
@@ -255,10 +238,6 @@ def decode_triples(item, rr, ee_threshold, gpout=None):
             tdata[ind].setdefault('gp', []).append( (sv1, sv2, vals) )
             if len(vals) == 0: continue
             if max(vals) < 0:
-                #print(vals)
-                #print(sv1, sv2)
-                #print(''.join(otokens))
-                #print(item['label'])
                 continue
         score = min(subv[sv1], objv[sv2])
         if score < ee_threshold: continue
@@ -274,8 +253,7 @@ if args.do_train:
     total_steps = len(dl_train) * epochs
 
     rc = RCModel().cuda()
-    rcmfile = wdir(f'rc_negative_{negative_threshold}.pt')
-    #rc.load_state_dict(torch.load(rcmfile))
+    rcmfile = wdir(f'rc.pt')
     pt_utils.lock_transformer_layers(rc.bert, 6)
     optimizer, scheduler = pt_utils.get_bert_optim_and_sche(rc, 5e-5, total_steps)
 
@@ -283,7 +261,6 @@ if args.do_train:
     
     FN_RATIO = 0
     
-    #loss_fct = lambda y_pred, y_true: - 10*(y_true*torch.log(y_pred+1e-9)).mean() - torch.log(((1-y_true)*(1-y_pred)).mean()+1e-9)
     print(dss['train'].y)
     PI_RC = dss['train'].y / (len(dss['train']) * len(rel_map))
     print(PI_RC)
@@ -295,8 +272,6 @@ if args.do_train:
         y = y.cuda()
         out = model(x.cuda())
         loss = loss_fct(out, y) + 0.1 * out.mean()
-        #loss = pu_loss_fct(y,out) #+ 0.1 * out.mean()
-        #print(y.device, out.device)
         oc = (out > 0.5).float()
         prec = (oc + y > 1.5).sum() / max(oc.sum().item(), 1)
         reca = (oc + y > 1.5).sum() / max(y.sum().item(), 1)
@@ -330,13 +305,11 @@ if args.do_train:
     total_steps = len(dl_train) * epochs
 
     ee = EEModel().cuda()
-    eemfile = wdir(f'ee_negative_{negative_threshold}.pt')
-    #ee.load_state_dict(torch.load(eemfile))
+    eemfile = wdir(f'ee.pt')
     pt_utils.lock_transformer_layers(ee.bert, 3)
     optimizer, scheduler = pt_utils.get_bert_optim_and_sche(ee, 5e-5, total_steps)
 
     loss_fct = lambda y_pred, y_true: - (y_true*torch.log(y_pred+1e-9) + (1-y_true)*torch.log(1-y_pred+1e-9)).mean()
-    #loss_fct = lambda y_pred, y_true: - 5*(y_true*torch.log(y_pred+1e-9)).mean() - torch.log(((1-y_true)*(1-y_pred)).mean()+1e-9)
 
     def train_func(model, ditem):
         x, y = ditem
@@ -353,7 +326,7 @@ if args.do_train:
     pt_utils.train_model(ee, optimizer, dl_train, epochs, train_func, test_ee, 
                    scheduler=scheduler, save_file=eemfile)
 
-qdir = '/data/dell/dingzepeng/filter_with_LLM/' + dname
+qdir = 'your_path'
 
 if args.do_test:
     # generate candidate triples
@@ -380,10 +353,7 @@ if args.do_test:
     if args.filter:
         import relcomb
         gp = relcomb.GlobalPointerModel(plm_name).cuda()
-        #gp.load_state_dict(torch.load(wdir('relcomb_BCE_2.pt')))
         gp.load_state_dict(torch.load(qdir + f'/relcomb_BCE_sh_{negative_threshold}.pt'),strict=False)
-        #gp.load_state_dict(torch.load(wdir('relcomb_GPCE.pt')))
-        # gp.load_state_dict(torch.load(wdir('relcomb_BCE_abl_norope.pt')))
         gpouts = []
         for x, y in dl_rc:
             out = gp(x.cuda()).detach().cpu()
@@ -402,78 +372,6 @@ if args.do_test:
     for item, rr in zip(ds_ee.items, outs):  
         triples = decode_triples(item, rr, ee_threshold, gpouts[item['id']])
         tdata[item['id']].setdefault('preds', []).extend(triples)
-    with open(wdir('smallmodel_triples.json'), 'w', encoding='utf-8') as fout:
-        wdata = [{'sentText':x['sentText'],'preds':x['preds'] if 'preds' in x.keys() else [],'std_ans':x['relationMentions']} for x in tdata]   # 也保留relationMentions便于后续评估
+    with open(wdir('your_path'), 'w', encoding='utf-8') as fout:
+        wdata = [{'sentText':x['sentText'],'preds':x['preds'] if 'preds' in x.keys() else [],'std_ans':x['relationMentions']} for x in tdata]
         json.dump(wdata, fout, ensure_ascii=False, indent=2)
-
-# if args.do_test:
-#     tdata = ljqpy.LoadJsons(fns['test'])
-#     ds_rc = Dataset(tdata, 0)
-#     dl_rc = torch.utils.data.DataLoader(ds_rc, batch_size=16, shuffle=False, collate_fn=rc_collate_fn)
-#     rc = RCModel().cuda()
-#     rc.load_state_dict(torch.load(wdir(f'rc.pt')))
-#     ee = EEModel().cuda()
-#     ee.load_state_dict(torch.load(wdir(f'ee.pt')))
-#     outs = [] 
-#     with torch.no_grad():
-#         for x, y in dl_rc:
-#             out = rc(x.cuda()).detach().cpu()
-#             for z in out: outs.append(z.numpy())
-#     f1 = MetricF1()
-#     for item, out in zip(tdata, outs):
-#         rc_pred = []
-#         for i, v in enumerate(out):
-#             if v > rc_threshold: rc_pred.append(rev_rel_map[i])
-#         item['rc_pred'] = rc_pred
-#         f1.append(rc_pred, list(set(x['label'] for x in item['relationMentions'])))
-#     #print('RC:')
-#     #f1.compute()
-#     print('\n')
-
-#     if args.filter:
-#         import relcomb
-#         gp = relcomb.GlobalPointerModel(plm_name).cuda()
-#         #gp.load_state_dict(torch.load(wdir('relcomb_BCE_2.pt')))
-#         gp.load_state_dict(torch.load(wdir(f'relcomb_BCE_sh_{negative_threshold}_new2.pt')))
-#         #gp.load_state_dict(torch.load(wdir('relcomb_GPCE.pt')))
-#         # gp.load_state_dict(torch.load(wdir('relcomb_BCE_abl_norope.pt')))
-#         gpouts = []
-#         for x, y in dl_rc:
-#             out = gp(x.cuda()).detach().cpu()
-#             for z in out: gpouts.append(z.numpy())
-#         print('gp enabled')
-#     else:
-#         gpouts = [None] * len(tdata)
-
-#     ds_ee = DatasetEE(tdata, 0)
-#     dl_ee = torch.utils.data.DataLoader(ds_ee, batch_size=30, shuffle=False, collate_fn=ee_collate_fn)
-#     outs = [] 
-#     with torch.no_grad():
-#         for x, y in dl_ee:
-#             out = ee(x.cuda()).detach().cpu()
-#             for z in out: outs.append(z.numpy())
-#     for item, rr in zip(ds_ee.items, outs):  
-#         triples = decode_triples(item, rr, ee_threshold, gpouts[item['id']])
-#         tdata[item['id']].setdefault('preds', []).extend(triples)
-    
-#     for textlen in [0, 30, 50, 70, 100]:
-#         f1 = MetricF1()
-#         fout = open(f'result/{dname}_ret_textlen{textlen}.txt', 'w', encoding='utf-8')
-#         for item in tdata:
-#             triples, spos = item.get('preds', []), item['relationMentions']
-#             if len(tokenizer.tokenize(item['sentText'])) < textlen:
-#                 continue
-#             triples = set(tt(x) for x in triples)
-#             spos = set(tt(x) for x in spos)
-#             #if len(spos) < spolimit: continue
-#             print('-'*30, file=fout)
-#             print(item['sentText'], file=fout)
-#             for x in triples&spos: print('o', x, file=fout)
-#             for x in triples-spos: print('-', x, file=fout)
-#             for x in spos-triples: print('+', x, file=fout)
-#             for x in item.get('gp', []): print(x, file=fout)
-#             for x in item.get('gp_detail', []): print(x, file=fout)
-#             f1.append(triples, spos)
-#         print(f'\ntextlen={textlen}')
-#         f1.compute()
-#         fout.close()

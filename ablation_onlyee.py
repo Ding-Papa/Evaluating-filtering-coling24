@@ -1,4 +1,3 @@
-# 提供的candidate pairs为ee直接抽出来的，没经过filter筛选
 import os, sys, time, ljqpy, math, re, json
 import unicodedata
 from tqdm import tqdm
@@ -82,36 +81,31 @@ if __name__ == "__main__":
             prompt += "{}{}\n<end>".format(old_query, response)
         prompt += "{}".format(query)
         return prompt
-    model_name = '/data/dell/.cache/huggingface/hub/models--Qwen--Qwen-7B-Chat/snapshots/5c611a5cde5769440581f91e8b4bba050f62b1af'
-    # model_name = '/data/dell/ljq/llama_13b_112_sft_v1'
-    # model_name = '/home/dell/Logic/vicuna-13b-v1.5/'
-    path_to_adapter = '/data/dell/dingzepeng/filter_with_LLM/Qwen_finetune/output_qwen/' + dname
+    model_name = 'your_base_model_path'
+    path_to_adapter = 'your_adapter_path(Qwen)'
     # tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     # model = AutoModelForCausalLM.from_pretrained(model_name,trust_remote_code=True).cuda()
     tokenizer = AutoTokenizer.from_pretrained(path_to_adapter, trust_remote_code=True)
     model = AutoPeftModelForCausalLM.from_pretrained(path_to_adapter,trust_remote_code=True).cuda()
-    model.generation_config = GenerationConfig.from_pretrained(model_name, trust_remote_code=True)  # 可以尝试注释掉这一行
+    model.generation_config = GenerationConfig.from_pretrained(model_name, trust_remote_code=True)
     # tokenizer = LlamaTokenizer.from_pretrained(model_name)
     # model = LlamaForCausalLM.from_pretrained(model_name, low_cpu_mem_usage=True).cuda()
-    # model = PeftModel.from_pretrained(model, f'/data/dell/dingzepeng/filter_with_LLM/vicuna_finetune/vicuna/{dname}/{dname}_epoch29', fan_in_fan_out=False)
+    # model = PeftModel.from_pretrained(model, 'your_peft_model_path', fan_in_fan_out=False)
     if torch.cuda.is_available():
         device = "cuda"
     else:
         device = "cpu"
     model.eval()
     model = model.to(device)
-    def general_llm(wdata): # 给原句和candidate_pair作为输入，分别保存其初始输出以及经过filter提示后的输出. 适用于qwen
+    def general_llm(wdata):
         query_session = inst_english + '\n' + wdata['sentText']
-        # query_session = inst + '\n' + wdata['sentText']  # 中文提示
         candidates = [(x['em1Text'], x['em2Text']) for x in wdata['preds']]
         candi_inst = f'Now we claim that the entity pairs that may be related in the above sentence are {candidates}. Please check the extraction results and fill in the missing triples, remove the wrong triples and output the final result.'
-        # candi_inst += 'Please output according to the specified format: [{"em1Text": subject1, "em2Text": object1, "label": relationship1}, {"em1Text": subject2, "em2Text": object2, "label": relationship2},...]'
-        queries = [query_session, candi_inst]
         response1, history = model.chat(tokenizer, queries[0], history=None)
         response2, history = model.chat(tokenizer, queries[1], history=history)
         return response1, response2
     
-    # def general_llm(wdata): # 给原句和candidate_pair作为输入，分别保存其初始输出以及经过filter提示后的输出
+    # def general_llm(wdata):
     #     query_session = inst_english + '\n' + wdata['sentText'] + '\n->'
     #     history = []
     #     prompt = generate_prompt(query_session, history)
@@ -136,7 +130,6 @@ if __name__ == "__main__":
     #     history.append((query_session, response))
         
     #     candidates = [(x['em1Text'], x['em2Text']) for x in wdata['preds']]
-    #     # candi_inst = f'经过检测，上面所给句子中可能有关系的实体对为{candidates}。请对抽取结果进行检查，并把漏掉的三元组补齐，输出最终结果。'
     #     candi_inst = f'Now we claim that the entity pairs that may be related in the above sentence are {candidates}. Please check the extraction results and fill in the missing triples, remove the wrong triples and output the final result.\n->'
     #     prompt = generate_prompt(candi_inst, history)
     #     input_ids = tokenizer(prompt, return_tensors="pt")
@@ -178,10 +171,10 @@ if __name__ == "__main__":
                 filter_list.append(p2)
             idx += 1
             if idx % 5 == 0:
-                with open(wdir('origin_llm_qwen7B_ablation.json'), 'a', encoding='utf-8') as fout:
+                with open(wdir('your_output_file'), 'a', encoding='utf-8') as fout:
                     json.dump(origin_list, fout, ensure_ascii=False, indent=2)
                 
-                with open(wdir('filter_llm_qwen7B_ablation.json'), 'a', encoding='utf-8') as fout:
+                with open(wdir('your_output_file'), 'a', encoding='utf-8') as fout:
                     json.dump(filter_list, fout, ensure_ascii=False, indent=2)
                 origin_list = []
                 filter_list = []    
