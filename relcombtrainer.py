@@ -28,9 +28,9 @@ dsplits = 'train test valid'.split()
 fns = {x:os.path.join(datadir, f'new_{x}.json') for x in dsplits}
 
 # plm_name = config[dname]['plm_name']
-if dname in ['HacRED', 'ske2019']: plm_name = '/data/dell/dingzepeng/hub/models--hfl--chinese-roberta-wwm-ext/snapshots/5c58d0b8ec1d9014354d691c538661bf00bfdb44'
+if dname in ['HacRED', 'ske2019']: plm_name = 'hfl/chinese-roberta-wwm-ext'
 # if dname in ['HacRED', 'ske2019']: plm_name = 'bert-base-chinese'
-else: plm_name = '/data/dell/dingzepeng/hub/models--bert-base-cased/snapshots/5532cc56f74641d4bb33641f5c76a55d11f846e0'
+else: plm_name = 'bert-base-cased'
 tokenizer = BertTokenizer.from_pretrained(plm_name)
 
 if not os.path.isdir(dname): os.makedirs(dname)

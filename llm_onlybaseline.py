@@ -71,12 +71,16 @@ if __name__ == "__main__":
             prompt += "{}{}\n<end>".format(old_query, response)
         prompt += "{}".format(query)
         return prompt
-    # model_name = '/data/dell/.cache/huggingface/hub/models--Qwen--Qwen-7B-Chat/snapshots/5c611a5cde5769440581f91e8b4bba050f62b1af'
-    # model_name = '/data/dell/ljq/llama_13b_112_sft_v1'
-    model_name = '/home/dell/Logic/vicuna-13b-v1.5/'
-    tokenizer = LlamaTokenizer.from_pretrained(model_name)
-    model = LlamaForCausalLM.from_pretrained(model_name, low_cpu_mem_usage=True).cuda()
-    # model = PeftModel.from_pretrained(model, f'/data/dell/dingzepeng/filter_with_LLM/vicuna_finetune/vicuna/{dname}/{dname}_epoch29', fan_in_fan_out=False)
+    model_name = 'your_base_model_path'
+    path_to_adapter = 'your_adapter_path(Qwen)'
+    # tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    # model = AutoModelForCausalLM.from_pretrained(model_name,trust_remote_code=True).cuda()
+    tokenizer = AutoTokenizer.from_pretrained(path_to_adapter, trust_remote_code=True)
+    model = AutoPeftModelForCausalLM.from_pretrained(path_to_adapter,trust_remote_code=True).cuda()
+    model.generation_config = GenerationConfig.from_pretrained(model_name, trust_remote_code=True)
+    # tokenizer = LlamaTokenizer.from_pretrained(model_name)
+    # model = LlamaForCausalLM.from_pretrained(model_name, low_cpu_mem_usage=True).cuda()
+    # model = PeftModel.from_pretrained(model, 'your_peft_model_path', fan_in_fan_out=False)
     if torch.cuda.is_available():
         device = "cuda"
     else:
@@ -84,7 +88,7 @@ if __name__ == "__main__":
     model.eval()
     model = model.to(device)
     
-    def general_llm(wdata): # 给原句和candidate_pair作为输入，分别保存其初始输出以及经过filter提示后的输出
+    def general_llm(wdata):
         query_session = inst_english + '\n' + wdata['sentText'] + '\n->'
         history = []
         prompt = generate_prompt(query_session, history)
@@ -111,7 +115,7 @@ if __name__ == "__main__":
     origin_list = []
     idx = 0
     
-    with open(wdir('candidate.json'), 'r', encoding='utf-8') as fin:
+    with open(wdir('your_file_path_name'), 'r', encoding='utf-8') as fin:
         wdatas = json.load(fin)
         for wdata in tqdm(wdatas):
             try:
@@ -124,6 +128,6 @@ if __name__ == "__main__":
                 origin_list.append(p1)
             idx += 1
             if idx % 5 == 0:
-                with open(wdir('origin_llm_vicuna.json'), 'a', encoding='utf-8') as fout:
+                with open(wdir('your_file_path_name'), 'a', encoding='utf-8') as fout:
                     json.dump(origin_list, fout, ensure_ascii=False, indent=2)
                 origin_list = []  
