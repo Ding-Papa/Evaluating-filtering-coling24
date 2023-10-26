@@ -1,0 +1,14 @@
+{
+    "/location/location/contains": "location contains",
+    "/location/administrative_division/country": "administrative division of country",
+    "/location/country/administrative_divisions": "country of administrative divisions",
+    "/business/person/company": "company",
+    "/people/person/place_lived": "place lived",
+    "/people/person/nationality": "nationality",
+    "/location/neighborhood/neighborhood_of": "neighborhood of",
+    "/people/deceased_person/place_of_death": "place of death",
+    "/location/country/capital": "country capital",
+    "/people/person/place_of_birth": "place of birth",
+    "/business/company/founders": "company founders",
+    "/people/person/children": "children"
+}

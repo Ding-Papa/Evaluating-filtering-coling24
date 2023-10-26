@@ -1,0 +1,14 @@
+{
+    "location contains": 0,
+    "administrative division of country": 1,
+    "country of administrative divisions": 2,
+    "company": 3,
+    "place lived": 4,
+    "nationality": 5,
+    "neighborhood of": 6,
+    "place of death": 7,
+    "country capital": 8,
+    "place of birth": 9,
+    "company founders": 10,
+    "children": 11
+}

@@ -1,0 +1,14 @@
+{
+    "/location/location/contains": 27697,
+    "/location/administrative_division/country": 5860,
+    "/location/country/administrative_divisions": 5364,
+    "/business/person/company": 5354,
+    "/people/person/place_lived": 6884,
+    "/people/person/nationality": 7308,
+    "/location/neighborhood/neighborhood_of": 5288,
+    "/people/deceased_person/place_of_death": 1823,
+    "/location/country/capital": 4230,
+    "/people/person/place_of_birth": 2915,
+    "/business/company/founders": 755,
+    "/people/person/children": 444
+}
