@@ -12,4 +12,6 @@ You can run the *relcombtrainer.py* file to train and save our evaluation model:
 + use *--dname datasetname* to specify the dataset for training, and the evaluation model will be saved in the *datasetname* directory.
 
 Our instructions and prompts are in the *llm_batch_inference.py* file, and you can run this file to perform our evaulation-filtering LLM-based extraction framework:
-+ use *--dname datasetname* to specify the dataset for testing, 
++ use *--dname datasetname* to specify the dataset for testing. Please specify the file path of candidates and save path of results in the line 168-190 of this code file.
++ use *--model* to specify the LLM model name. Please modify the model path in the line 142-144 of this code file.
++ use *--peft* to specify whether use peft model or not.
