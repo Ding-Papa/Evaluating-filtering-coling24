@@ -17,8 +17,8 @@ import torch
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dname", help='dataset for testing', choices=['ske2019','HacRED','NYT10-HRL','NYT11-HRL','NYT21-HRL', 'WebNLG', 'WikiKBP', 'NYT10', 'WebNLG_star','CoNLL04'], default='HacRED')
-parser.add_argument("--model", help='LLM model name', choices=['cutegpt','qwen7B','vicuna'], default='qwen7B')
-parser.add_argument("--peft", help='whether peft or not', choices=['cutegpt','qwen7B','vicuna'], default=True)
+parser.add_argument("--model", help='LLM model name', choices=['llama','qwen7B','vicuna'], default='qwen7B')
+parser.add_argument("--peft", help='whether peft or not', type=bool, default=True)
 parser.add_argument("--stage", help='which stage to delete', choices=['one','two'], default='one')
 
 args = parser.parse_args()

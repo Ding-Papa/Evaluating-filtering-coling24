@@ -18,6 +18,8 @@ import torch
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dname", help='dataset for training and testing', choices=['ske2019','HacRED','NYT10-HRL','NYT11-HRL','NYT21-HRL', 'WebNLG', 'WikiKBP', 'NYT10', 'WebNLG_star','CoNLL04'], default='HacRED')
+parser.add_argument("--model", help='LLM model name', choices=['llama','qwen7B','vicuna'], default='qwen7B')
+parser.add_argument("--peft", help='whether peft or not', type=bool, default=True)
 args = parser.parse_args()
 dname = args.dname
 datadir = './dataset/' + dname
@@ -63,50 +65,17 @@ inst_english = f'Predefine the following relationship list:{relation_list}, plea
     Again, it is emphasized that the relationship of the triples output must be selected from the predefined list above, and no relationship not in the list can be output. At the same time, please output as many triples as possible that meet the requirements.
     Please according to the input, output all triples containing the above relationship according to the format requirements. Note that when the entity (subject or object) can be split into two words (such as a comma or comma in the middle), it should be split into two triples instead of merging into one triple.\n->
     '''
-
-# 注意下面的顺序！目前是针对WikiKBP定制的！
-inst_english2 = f'Predefine the following relationship list:{relation_list}, please extract all triples containing the above relationship from the following sentences.'+\
-    '''
-    Note that the relationship name of the triple must be selected from the above relationship list, and other relationships not listed are not considered. Please output according to the specified format below:
-    [{"em1Text": subject1, "label": relationship1, "em2Text": object1}, {"em1Text": subject2, "label": relationship2, "em2Text": object2}]
-    Note that the triple may not only have two, please imitate this format and output all triples that meet the requirements.
-    Again, it is emphasized that the relationship of the triples output must be selected from the predefined list above, and no relationship not in the list can be output. At the same time, please output as many triples as possible that meet the requirements.
-    Please according to the input, output all triples containing the above relationship according to the format requirements. Note that when the entity (subject or object) can be split into two words (such as a comma or comma in the middle), it should be split into two triples instead of merging into one triple.\n->
-    '''
-
-if __name__ == "__main__":
-    def generate_prompt(query, history, input=None):
-        prompt = ""
-        for i, (old_query, response) in enumerate(history):
-            prompt += "{}{}\n<end>".format(old_query, response)
-        prompt += "{}".format(query)
-        return prompt
-    model_name = 'your_base_model_path'
-    path_to_adapter = 'your_adapter_path(Qwen)'
-    # tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-    # model = AutoModelForCausalLM.from_pretrained(model_name,trust_remote_code=True).cuda()
-    tokenizer = AutoTokenizer.from_pretrained(path_to_adapter, trust_remote_code=True)
-    model = AutoPeftModelForCausalLM.from_pretrained(path_to_adapter,trust_remote_code=True).cuda()
-    model.generation_config = GenerationConfig.from_pretrained(model_name, trust_remote_code=True)
-    # tokenizer = LlamaTokenizer.from_pretrained(model_name)
-    # model = LlamaForCausalLM.from_pretrained(model_name, low_cpu_mem_usage=True).cuda()
-    # model = PeftModel.from_pretrained(model, 'your_peft_model_path', fan_in_fan_out=False)
-    if torch.cuda.is_available():
-        device = "cuda"
-    else:
-        device = "cpu"
-    model.eval()
-    model = model.to(device)
-    # def general_llm(wdata): # qwen
-    #     query_session = inst_english + '\n' + wdata['sentText']
-    #     candidates = [(x['em1Text'], x['em2Text']) for x in wdata['preds']]
-    #     candi_inst = f'Now we claim that the entity pairs that may be related in the above sentence are {candidates}. Please check the extraction results and fill in the missing triples, remove the wrong triples and output the final result.'
-    #     candi_inst += 'Please output according to the specified format: [{"em1Text": subject1, "em2Text": object1, "label": relationship1}, {"em1Text": subject2, "em2Text": object2, "label": relationship2},...]'
-    #     queries = [query_session, candi_inst]
-    #     response1, history = model.chat(tokenizer, queries[0], history=None)
-    #     response2, history = model.chat(tokenizer, queries[1], history=history)
-    #     return response1, response2
-    
+if args.model == 'qwen7B':
+    def general_llm(wdata): # qwen
+        query_session = inst_english + '\n' + wdata['sentText']
+        candidates = [(x['em1Text'], x['em2Text']) for x in wdata['preds']]
+        candi_inst = f'Now we claim that the entity pairs that may be related in the above sentence are {candidates}. Please check the extraction results and fill in the missing triples, remove the wrong triples and output the final result.'
+        candi_inst += 'Please output according to the specified format: [{"em1Text": subject1, "em2Text": object1, "label": relationship1}, {"em1Text": subject2, "em2Text": object2, "label": relationship2},...]'
+        queries = [query_session, candi_inst]
+        response1, history = model.chat(tokenizer, queries[0], history=None)
+        response2, history = model.chat(tokenizer, queries[1], history=history)
+        return response1, response2
+else:
     def general_llm(wdata): # llama, vicuna
         query_session = inst_english + '\n' + wdata['sentText'] + '\n->'
         history = []
@@ -153,6 +122,43 @@ if __name__ == "__main__":
         response2 = tokenizer.decode(s)
         response2 = response2.replace('<s>', '').replace('<end>', '').replace('</s>', '')
         return response, response2
+
+# inst_english2 = f'Predefine the following relationship list:{relation_list}, please extract all triples containing the above relationship from the following sentences.'+\
+#     '''
+#     Note that the relationship name of the triple must be selected from the above relationship list, and other relationships not listed are not considered. Please output according to the specified format below:
+#     [{"em1Text": subject1, "label": relationship1, "em2Text": object1}, {"em1Text": subject2, "label": relationship2, "em2Text": object2}]
+#     Note that the triple may not only have two, please imitate this format and output all triples that meet the requirements.
+#     Again, it is emphasized that the relationship of the triples output must be selected from the predefined list above, and no relationship not in the list can be output. At the same time, please output as many triples as possible that meet the requirements.
+#     Please according to the input, output all triples containing the above relationship according to the format requirements. Note that when the entity (subject or object) can be split into two words (such as a comma or comma in the middle), it should be split into two triples instead of merging into one triple.\n->
+#     '''
+
+if __name__ == "__main__":
+    def generate_prompt(query, history, input=None):
+        prompt = ""
+        for i, (old_query, response) in enumerate(history):
+            prompt += "{}{}\n<end>".format(old_query, response)
+        prompt += "{}".format(query)
+        return prompt
+    model_name = 'your_base_model_path'
+    path_to_adapter = 'your_adapter_path(Qwen)'
+    if args.model == 'qwen7B':
+        if args.peft:
+            tokenizer = AutoTokenizer.from_pretrained(path_to_adapter, trust_remote_code=True)
+            model = AutoPeftModelForCausalLM.from_pretrained(path_to_adapter,trust_remote_code=True).cuda()
+        else:
+            tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+            model = AutoModelForCausalLM.from_pretrained(model_name,trust_remote_code=True).cuda()
+        model.generation_config = GenerationConfig.from_pretrained(model_name, trust_remote_code=True)
+    else:
+        tokenizer = LlamaTokenizer.from_pretrained(model_name)
+        model = LlamaForCausalLM.from_pretrained(model_name, low_cpu_mem_usage=True).cuda()
+        model = PeftModel.from_pretrained(model, 'your_peft_model_path', fan_in_fan_out=False)
+    if torch.cuda.is_available():
+        device = "cuda"
+    else:
+        device = "cpu"
+    model.eval()
+    model = model.to(device)
     
     origin_list = []
     filter_list = []
