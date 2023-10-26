@@ -11,4 +11,5 @@ You can run the *main_framework.py* file with additional arguements：
 You can run the *relcombtrainer.py* file to train and save our evaluation model:
 + use *--dname datasetname* to specify the dataset for training, and the evaluation model will be saved in the *datasetname* directory.
 
-Our prompt template and 
+Our instructions and prompts are in the *llm_batch_inference.py* file, and you can run this file to perform our evaulation-filtering LLM-based extraction framework:
++ use *--dname datasetname* to specify the dataset for testing, 
