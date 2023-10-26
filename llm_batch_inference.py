@@ -141,6 +141,7 @@ if __name__ == "__main__":
         return prompt
     model_name = 'your_base_model_path'
     path_to_adapter = 'your_adapter_path(Qwen)'
+    peft_model_path = 'your_adapter_path(llama, vicuna)'
     if args.model == 'qwen7B':
         if args.peft:
             tokenizer = AutoTokenizer.from_pretrained(path_to_adapter, trust_remote_code=True)
@@ -152,7 +153,7 @@ if __name__ == "__main__":
     else:
         tokenizer = LlamaTokenizer.from_pretrained(model_name)
         model = LlamaForCausalLM.from_pretrained(model_name, low_cpu_mem_usage=True).cuda()
-        model = PeftModel.from_pretrained(model, 'your_peft_model_path', fan_in_fan_out=False)
+        model = PeftModel.from_pretrained(model, peft_model_path, fan_in_fan_out=False)
     if torch.cuda.is_available():
         device = "cuda"
     else:
@@ -164,7 +165,7 @@ if __name__ == "__main__":
     filter_list = []
     idx = 0
     
-    with open(wdir('your_file_path'), 'r', encoding='utf-8') as fin:
+    with open(wdir('your_candidate_file_path'), 'r', encoding='utf-8') as fin:
         wdatas = json.load(fin)
         for wdata in tqdm(wdatas):
             try:
